@@ -62,4 +62,24 @@ func TestConfig(t *testing.T) {
 			require.Equal(t, "myurl.com", c.getConfig().host)
 		})
 	})
+
+	t.Run("WithMongoUri", func(t *testing.T) {
+		t.Run("default", func(t *testing.T) {
+			c := DefaultConfig()
+			require.Equal(t, "mongodb://localhost:27017", c.getConfig().mongoUri)
+		})
+
+		t.Run("valid", func(t *testing.T) {
+			mongoUri := "mongodb://root:password123@198.174.21.23:27017,198.342.121.23:27017,142.32.32.21:3001/databasename"
+			c := DefaultConfig().WithMongoUri(mongoUri)
+			require.Nil(t, c.getConfig().err)
+			require.Equal(t, mongoUri, c.getConfig().mongoUri)
+		})
+
+		t.Run("invalid", func(t *testing.T) {
+			mongoUri := "mongodb://root:password123@198.174.21.23:27017198.342.121.23:27017,142.32.32.21:3001/databasename"
+			c := DefaultConfig().WithMongoUri(mongoUri)
+			require.NotNil(t, c.getConfig().err)
+		})
+	})
 }
