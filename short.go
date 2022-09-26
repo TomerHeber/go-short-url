@@ -1,6 +1,7 @@
 package short
 
 type ShortenedURL interface {
+	GetURL() string
 }
 
 type Shortener interface {
