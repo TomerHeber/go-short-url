@@ -13,6 +13,13 @@ import (
 )
 
 type Store interface {
+	Insert(ctx context.Context, ic *insertConfig) error
+}
+
+type insertConfig struct {
+	url    string
+	id     string
+	upsert bool
 }
 
 type store struct {
@@ -29,22 +36,15 @@ var mongoDbClientMapLock sync.Mutex
 
 func getMongoClient(ctx context.Context, mongoUri string) (*mongo.Client, error) {
 	mongoDbClientMapLock.Lock()
+	defer mongoDbClientMapLock.Unlock()
+
 	if c, ok := mongoDbClientMap[mongoUri]; ok {
-		mongoDbClientMapLock.Unlock()
 		return c, nil
 	}
-	mongoDbClientMapLock.Unlock()
 
 	c, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoUri))
 	if err != nil {
 		return nil, err
-	}
-
-	mongoDbClientMapLock.Lock()
-	defer mongoDbClientMapLock.Unlock()
-	if cother, ok := mongoDbClientMap[mongoUri]; ok {
-		c.Disconnect(ctx)
-		return cother, nil
 	}
 
 	mongoDbClientMap[mongoUri] = c
@@ -126,4 +126,8 @@ func NewStore(mongoUri string, name string) (Store, error) {
 		name:       name,
 		collection: collection,
 	}, nil
+}
+
+func (s *store) Insert(ctx context.Context, ic *insertConfig) error {
+	return nil
 }

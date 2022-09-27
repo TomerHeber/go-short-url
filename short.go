@@ -50,7 +50,11 @@ func NewShortener(config ...Config) (Shortener, error) {
 	return &s, nil
 }
 
-func (s *shortner) insert(ctx context.Context, url string, id string, upsert bool) (ShortenedURL, error) {
+func (s *shortner) insert(ctx context.Context, ic *insertConfig) (ShortenedURL, error) {
+	if err := s.store.Insert(ctx, ic); err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 
@@ -79,7 +83,9 @@ func (s *shortner) CreateShortenedURL(ctx context.Context, url string, config ..
 	}
 
 	if len(uci.alias) > 0 {
-		return s.insert(ctx, url, uci.alias, uci.upsertAlias)
+		return s.insert(ctx, &insertConfig{
+			url: url, id: uci.alias, upsert: uci.upsertAlias,
+		})
 	}
 
 	for {
@@ -88,14 +94,17 @@ func (s *shortner) CreateShortenedURL(ctx context.Context, url string, config ..
 			return nil, err
 		}
 
-		shortenedUrl, err := s.insert(ctx, url, id, false)
+		shortenedUrl, err := s.insert(ctx, &insertConfig{
+			url: url, id: id, upsert: false,
+		})
 		if err != nil {
-			// In rare cases a conflict can occur. Generate a new random id.
+			// In rare cases (statistically) a conflict may occur. Generate a new random id.
 			if errors.Is(err, &ConflictError{}) {
 				continue
 			}
 			return nil, err
 		}
+
 		return shortenedUrl, nil
 	}
 }

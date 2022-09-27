@@ -19,7 +19,7 @@ func isAlphaNumeric(s string) bool {
 	return isAlphaNumericRegex.MatchString(s)
 }
 
-// generateRandomId generates a random base64 string (maximum length of 7).
+// generateRandomId generates a random base62 string (maximum length of 7).
 func generateRandomId() (string, error) {
 	integerId, err := rand.Int(rand.Reader, maxRandomIntegerId)
 	if err != nil {
