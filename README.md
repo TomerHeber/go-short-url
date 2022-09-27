@@ -1,2 +1,2 @@
 # go-short-url
-A URL shortener implemented in Go
+A URL shortener library implemented in Go.
