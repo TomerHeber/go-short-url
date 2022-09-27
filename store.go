@@ -69,7 +69,7 @@ func getMongoCollection(ctx context.Context, client *mongo.Client, name string) 
 	res := collectionsMap.FindOneAndUpdate(
 		ctx,
 		bson.M{"name": name},
-		bson.M{"$setOnInsert": bson.M{"collection_name": id, "name": name}},
+		bson.M{"$setOnInsert": bson.M{"collectionName": id, "name": name}},
 		options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After),
 	)
 	if res.Err() != nil {
@@ -77,7 +77,7 @@ func getMongoCollection(ctx context.Context, client *mongo.Client, name string) 
 	}
 
 	var payload struct {
-		CollectionName string `bson:"collection_name"`
+		CollectionName string `bson:"collectionName"`
 	}
 
 	if err := res.Decode(&payload); err != nil {
@@ -93,6 +93,10 @@ func getMongoCollection(ctx context.Context, client *mongo.Client, name string) 
 		{
 			Keys:    bson.M{"id": 1},
 			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys:    bson.M{"expireAt": 1},
+			Options: options.Index().SetExpireAfterSeconds(0),
 		}}); err != nil {
 		return nil, err
 	}

@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/google/uuid v1.3.0
+	github.com/jxskiss/base62 v1.1.0
 	github.com/stretchr/testify v1.8.0
 	github.com/tryvium-travels/memongo v0.7.0
 	go.mongodb.org/mongo-driver v1.10.2
