@@ -2,6 +2,7 @@ package short
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 )
 
 type Store interface {
@@ -17,9 +19,9 @@ type Store interface {
 }
 
 type insertConfig struct {
-	url    string
-	id     string
-	upsert bool
+	url      string
+	id       string
+	override bool
 }
 
 type store struct {
@@ -27,7 +29,6 @@ type store struct {
 	collection *mongo.Collection
 }
 
-const databaseName = "short"
 const collectionsMapName = "collections_map"
 
 // used as a cache to store MongoDB clients.
@@ -44,7 +45,7 @@ func getMongoClient(ctx context.Context, mongoUri string) (*mongo.Client, error)
 
 	c, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoUri))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to connect to %s: %w", mongoUri, err)
 	}
 
 	mongoDbClientMap[mongoUri] = c
@@ -52,15 +53,15 @@ func getMongoClient(ctx context.Context, mongoUri string) (*mongo.Client, error)
 	return c, nil
 }
 
-func getMongoCollection(ctx context.Context, client *mongo.Client, name string) (*mongo.Collection, error) {
-	collectionsMap := client.Database(databaseName).Collection(collectionsMapName)
+func getMongoCollection(ctx context.Context, database *mongo.Database, name string) (*mongo.Collection, error) {
+	collectionsMap := database.Collection(collectionsMapName)
 
 	// Index the collectionsMap collection.
 	if _, err := collectionsMap.Indexes().CreateOne(ctx, mongo.IndexModel{
 		Keys:    bson.M{"name": 1},
 		Options: options.Index().SetUnique(true),
 	}); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create an index for collection %s: %w", collectionsMapName, err)
 	}
 
 	id := uuid.New().String()
@@ -73,7 +74,7 @@ func getMongoCollection(ctx context.Context, client *mongo.Client, name string) 
 		options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After),
 	)
 	if res.Err() != nil {
-		return nil, res.Err()
+		return nil, fmt.Errorf("failed to find and/or insert a collection mapping for %s: %w", name, res.Err())
 	}
 
 	var payload struct {
@@ -81,10 +82,10 @@ func getMongoCollection(ctx context.Context, client *mongo.Client, name string) 
 	}
 
 	if err := res.Decode(&payload); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode a collection mapping document for %s: %w", name, err)
 	}
 
-	collection := client.Database(databaseName).Collection(payload.CollectionName)
+	collection := database.Collection(payload.CollectionName)
 	// Index the collection.
 	if _, err := collection.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{
@@ -98,7 +99,7 @@ func getMongoCollection(ctx context.Context, client *mongo.Client, name string) 
 			Keys:    bson.M{"expireAt": 1},
 			Options: options.Index().SetExpireAfterSeconds(0),
 		}}); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create an index for collection %s: %w", payload.CollectionName, err)
 	}
 
 	return collection, nil
@@ -117,7 +118,17 @@ func NewStore(mongoUri string, name string) (Store, error) {
 		return nil, err
 	}
 
-	collection, err := getMongoCollection(ctx, client, name)
+	cs, err := connstring.Parse(mongoUri)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse %s: %w", mongoUri, err)
+	}
+	if cs.Database == "" {
+		cs.Database = "short"
+	}
+
+	database := client.Database(cs.Database)
+
+	collection, err := getMongoCollection(ctx, database, name)
 	if err != nil {
 		return nil, err
 	}
@@ -129,5 +140,24 @@ func NewStore(mongoUri string, name string) (Store, error) {
 }
 
 func (s *store) Insert(ctx context.Context, ic *insertConfig) error {
+	if ic.override {
+		if _, err := s.collection.UpdateOne(
+			ctx,
+			bson.M{"id": ic.id},
+			bson.M{"$set": bson.M{"id": ic.id, "url": ic.url}},
+			options.Update().SetUpsert(true),
+		); err != nil {
+			return fmt.Errorf("failed to update or insert id %s: %w", ic.id, err)
+		}
+		return nil
+	}
+
+	if _, err := s.collection.InsertOne(ctx, bson.M{"id": ic.id, "url": ic.url}); err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return &ConflictError{}
+		}
+		return fmt.Errorf("failed to insert id %s: %w", ic.id, err)
+	}
+
 	return nil
 }

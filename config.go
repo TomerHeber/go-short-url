@@ -60,6 +60,7 @@ func (c config) WithHost(host string) Config {
 }
 
 // WithMongoUri set the URI for connecting to MongoDB.
+// If the MongoUri does not contain a database name, the database name will default to `short`.
 func (c config) WithMongoUri(mongoUri string) Config {
 	if _, err := connstring.ParseAndValidate(mongoUri); err != nil {
 		c.err = err

@@ -3,6 +3,7 @@ package short
 import (
 	"context"
 	"errors"
+	"fmt"
 )
 
 type ShortenedURL interface {
@@ -52,7 +53,7 @@ func NewShortener(config ...Config) (Shortener, error) {
 
 func (s *shortner) insert(ctx context.Context, ic *insertConfig) (ShortenedURL, error) {
 	if err := s.store.Insert(ctx, ic); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to insert an entry for a shortened url: %w", err)
 	}
 
 	return nil, nil
@@ -84,7 +85,7 @@ func (s *shortner) CreateShortenedURL(ctx context.Context, url string, config ..
 
 	if len(uci.alias) > 0 {
 		return s.insert(ctx, &insertConfig{
-			url: url, id: uci.alias, upsert: uci.upsertAlias,
+			url: url, id: uci.alias, override: uci.overrideAlias,
 		})
 	}
 
@@ -95,7 +96,7 @@ func (s *shortner) CreateShortenedURL(ctx context.Context, url string, config ..
 		}
 
 		shortenedUrl, err := s.insert(ctx, &insertConfig{
-			url: url, id: id, upsert: false,
+			url: url, id: id, override: false,
 		})
 		if err != nil {
 			// In rare cases (statistically) a conflict may occur. Generate a new random id.

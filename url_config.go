@@ -2,23 +2,25 @@ package short
 
 import "fmt"
 
+// TODO - add expriation.
+
 type UrlConfig interface {
 	getConfig() *urlConfig
 
 	WithAlias(alias string) UrlConfig
-	WithUpsertAlias(upsert bool) UrlConfig
+	WithOverrideAlias(override bool) UrlConfig
 }
 
 type urlConfig struct {
-	alias       string
-	upsertAlias bool
+	alias         string
+	overrideAlias bool
 
 	err error
 }
 
 // DefaultConfig returns a configuration with default values.
 // default alias: "" (empty string).
-// default upsert: false.
+// default override: false.
 func DefaultUrlConfig() UrlConfig {
 	return &urlConfig{}
 }
@@ -39,10 +41,10 @@ func (u urlConfig) WithAlias(alias string) UrlConfig {
 	return &u
 }
 
-// WithUpsertAlias set the upsert configuration.
-// When upsert is `true` it will insert a new or override an existing shortened url.
+// WithOverrideAlias set the override configuration.
+// When override is `true` it will insert a new or override an existing shortened url.
 // This field is ignored when there is no alias.
-func (u urlConfig) WithUpsertAlias(upsert bool) UrlConfig {
-	u.upsertAlias = upsert
+func (u urlConfig) WithOverrideAlias(override bool) UrlConfig {
+	u.overrideAlias = override
 	return &u
 }

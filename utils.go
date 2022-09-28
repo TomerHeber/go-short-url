@@ -23,7 +23,7 @@ func isAlphaNumeric(s string) bool {
 func generateRandomId() (string, error) {
 	integerId, err := rand.Int(rand.Reader, maxRandomIntegerId)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to generate a random number: %w", err)
 	}
 
 	return string(base62.FormatUint(integerId.Uint64())), nil
