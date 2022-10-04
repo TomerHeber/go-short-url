@@ -1,3 +1,5 @@
+[![Go Report Card](https://goreportcard.com/report/github.com/TomerHeber/go-short-url)](https://goreportcard.com/report/github.com/TomerHeber/go-short-url)
+
 # go-short-url
 A URL shortener library implemented in Go.
 
