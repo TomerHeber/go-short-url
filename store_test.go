@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/tryvium-travels/memongo"
@@ -85,9 +86,11 @@ func TestStore(t *testing.T) {
 
 		t.Run("Insert new", func(t *testing.T) {
 			s := getStoreHelper(t)
+			tm := time.Now().Add(time.Hour)
 			err := s.Insert(context.Background(), &insertConfig{
-				url: "https://test.com",
-				id:  "id",
+				url:        "https://test.com",
+				id:         "id",
+				expiration: &tm,
 			})
 			require.Nil(t, err)
 			validateDocumentHelper(t, s, "id", "https://test.com")

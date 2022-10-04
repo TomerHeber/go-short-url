@@ -3,8 +3,8 @@ name: Build
 on:
   pull_request:
     types:
-      - "opened"
-      - "synchronize"
+      - opened
+      - synchronize
 
 env:
   GO_VERSION: 1.19
