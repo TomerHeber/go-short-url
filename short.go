@@ -4,19 +4,30 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
+	"strings"
 )
 
 type ShortenedURL interface {
-	GetURL() string
+	GetUrl() string
 }
 
 type Shortener interface {
-	CreateShortenedURL(ctx context.Context, url string, config ...UrlConfig) (ShortenedURL, error)
+	CreateShortenedUrl(ctx context.Context, url string, config ...UrlConfig) (ShortenedURL, error)
+	GetUrlFromShortenedUrl(ctx context.Context, surl string) (string, error)
 }
 
 type shortner struct {
 	host  string
 	store Store
+}
+
+type shortenedUrl struct {
+	url string
+}
+
+func (s *shortenedUrl) GetUrl() string {
+	return s.url
 }
 
 // NewShortener creates a new shortener.
@@ -51,17 +62,28 @@ func NewShortener(config ...Config) (Shortener, error) {
 	return &s, nil
 }
 
+func newShortenedUrl(id string, host string) ShortenedURL {
+	scheme := "https://"
+	if strings.HasPrefix(host, "localhost") {
+		scheme = "http://"
+	}
+
+	return &shortenedUrl{
+		url: scheme + host + "/" + id,
+	}
+}
+
 func (s *shortner) insert(ctx context.Context, ic *insertConfig) (ShortenedURL, error) {
 	if err := s.store.Insert(ctx, ic); err != nil {
 		return nil, fmt.Errorf("failed to insert an entry for a shortened url: %w", err)
 	}
 
-	return nil, nil
+	return newShortenedUrl(ic.id, s.host), nil
 }
 
-// CreateShortenedURL creates a shortened url.
+// CreateShortenedUrl creates a shortened url.
 // If no configuration is passed uses the default configuration (see: `DefaultUrlConfig()`)
-func (s *shortner) CreateShortenedURL(ctx context.Context, url string, config ...UrlConfig) (ShortenedURL, error) {
+func (s *shortner) CreateShortenedUrl(ctx context.Context, url string, config ...UrlConfig) (ShortenedURL, error) {
 	if err := validateUrl(url); err != nil {
 		return nil, err
 	}
@@ -108,4 +130,19 @@ func (s *shortner) CreateShortenedURL(ctx context.Context, url string, config ..
 
 		return shortenedUrl, nil
 	}
+}
+
+func (s *shortner) GetUrlFromShortenedUrl(ctx context.Context, surl string) (string, error) {
+	su, err := url.ParseRequestURI(surl)
+	if err != nil {
+		return "", fmt.Errorf("invalid short url %s: %w", surl, err)
+	}
+
+	id := strings.Trim(su.Path, "/")
+
+	if len(id) == 0 || !isAlphaNumeric(id) {
+		return "", fmt.Errorf("invalid short url path %s", id)
+	}
+
+	return s.store.GetUrl(ctx, id)
 }

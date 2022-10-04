@@ -2,6 +2,7 @@ package short
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -15,7 +16,11 @@ import (
 )
 
 type Store interface {
+	// Insert adds a record to the storage.
+	// url, id and override are passed via an insertConfig struct.
 	Insert(ctx context.Context, ic *insertConfig) error
+	// GetUrl returns the url given an id.
+	GetUrl(ctx context.Context, id string) (string, error)
 }
 
 type insertConfig struct {
@@ -160,4 +165,25 @@ func (s *store) Insert(ctx context.Context, ic *insertConfig) error {
 	}
 
 	return nil
+}
+
+func (s *store) GetUrl(ctx context.Context, id string) (string, error) {
+	res := s.collection.FindOne(ctx, bson.M{"id": id})
+	if res.Err() != nil {
+		if errors.Is(res.Err(), mongo.ErrNoDocuments) {
+			return "", &IdNotFoundError{id: id}
+		}
+
+		return "", fmt.Errorf("error when calling FindOne in the store %s: %w", s.name, res.Err())
+	}
+
+	var payload struct {
+		Url string `json:"url"`
+	}
+
+	if err := res.Decode(&payload); err != nil {
+		return "", fmt.Errorf("failed to decode record: %w", err)
+	}
+
+	return payload.Url, nil
 }
