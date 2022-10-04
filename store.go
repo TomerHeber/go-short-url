@@ -24,9 +24,10 @@ type Store interface {
 }
 
 type insertConfig struct {
-	url      string
-	id       string
-	override bool
+	url        string
+	id         string
+	override   bool
+	expiration *time.Time
 }
 
 type store struct {
@@ -145,11 +146,16 @@ func NewStore(mongoUri string, name string) (Store, error) {
 }
 
 func (s *store) Insert(ctx context.Context, ic *insertConfig) error {
+	toSet := bson.M{"id": ic.id, "url": ic.url}
+	if ic.expiration != nil {
+		toSet["expireAt"] = ic.expiration.Unix()
+	}
+
 	if ic.override {
 		if _, err := s.collection.UpdateOne(
 			ctx,
 			bson.M{"id": ic.id},
-			bson.M{"$set": bson.M{"id": ic.id, "url": ic.url}},
+			bson.M{"$set": toSet},
 			options.Update().SetUpsert(true),
 		); err != nil {
 			return fmt.Errorf("failed to update or insert id %s: %w", ic.id, err)
@@ -157,7 +163,7 @@ func (s *store) Insert(ctx context.Context, ic *insertConfig) error {
 		return nil
 	}
 
-	if _, err := s.collection.InsertOne(ctx, bson.M{"id": ic.id, "url": ic.url}); err != nil {
+	if _, err := s.collection.InsertOne(ctx, toSet); err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			return &ConflictError{}
 		}
@@ -178,11 +184,16 @@ func (s *store) GetUrl(ctx context.Context, id string) (string, error) {
 	}
 
 	var payload struct {
-		Url string `json:"url"`
+		Url      string `bson:"url"`
+		ExpireAt *int64 `bson:"expireAt,omitempty"`
 	}
 
 	if err := res.Decode(&payload); err != nil {
 		return "", fmt.Errorf("failed to decode record: %w", err)
+	}
+
+	if payload.ExpireAt != nil && time.Now().Unix() > *payload.ExpireAt {
+		return "", &IdNotFoundError{id: id}
 	}
 
 	return payload.Url, nil

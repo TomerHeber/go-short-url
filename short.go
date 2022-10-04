@@ -109,7 +109,7 @@ func (s *shortner) CreateShortenedUrl(ctx context.Context, url string, config ..
 
 	if len(uci.alias) > 0 {
 		return s.insert(ctx, &insertConfig{
-			url: url, id: uci.alias, override: uci.overrideAlias,
+			url: url, id: uci.alias, override: uci.overrideAlias, expiration: uci.expirationDate,
 		})
 	}
 
@@ -120,7 +120,7 @@ func (s *shortner) CreateShortenedUrl(ctx context.Context, url string, config ..
 		}
 
 		shortenedUrl, err := s.insert(ctx, &insertConfig{
-			url: url, id: id, override: false,
+			url: url, id: id, override: false, expiration: uci.expirationDate,
 		})
 		if err != nil {
 			// In rare cases (statistically) a conflict may occur. Generate a new random id.
