@@ -13,7 +13,9 @@ type ShortenedURL interface {
 }
 
 type Shortener interface {
+	// CreateShortenedUrl creates a shortened url for `url`.
 	CreateShortenedUrl(ctx context.Context, url string, config ...UrlConfig) (ShortenedURL, error)
+	// GetUrlFromShortenedUrl receives a shortened url `surl` and returns the original url.
 	GetUrlFromShortenedUrl(ctx context.Context, surl string) (string, error)
 }
 
