@@ -40,11 +40,11 @@ func TestStore(t *testing.T) {
 
 	t.Run("NewStore", func(t *testing.T) {
 		uri := getRandomMongoURIForTesting()
-		_, err := NewStore(uri, "short.link")
+		_, err := newStore(uri, "short.link")
 		require.Nil(t, err)
-		_, err = NewStore(uri, "short.com")
+		_, err = newStore(uri, "short.com")
 		require.Nil(t, err)
-		_, err = NewStore(uri, "short.link")
+		_, err = newStore(uri, "short.link")
 		require.Nil(t, err)
 
 		client := mongoDbClientMap[uri]
@@ -64,7 +64,7 @@ func TestStore(t *testing.T) {
 		getStoreHelper := func(t *testing.T) Store {
 			t.Helper()
 			uri := getRandomMongoURIForTesting()
-			s, err := NewStore(uri, collectionName)
+			s, err := newStore(uri, collectionName)
 			require.Nil(t, err)
 			return s
 		}

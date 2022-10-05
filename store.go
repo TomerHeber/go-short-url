@@ -111,7 +111,7 @@ func getMongoCollection(ctx context.Context, database *mongo.Database, name stri
 	return collection, nil
 }
 
-func NewStore(mongoUri string, name string) (Store, error) {
+func newStore(mongoUri string, name string) (Store, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
