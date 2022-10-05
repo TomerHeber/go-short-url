@@ -60,7 +60,7 @@ func NewShortener(config ...Config) (Shortener, error) {
 	var s shortner
 
 	s.host = ci.host
-	s.store, err = NewStore(ci.mongoUri, ci.host)
+	s.store, err = newStore(ci.mongoUri, ci.host)
 	if err != nil {
 		return nil, err
 	}

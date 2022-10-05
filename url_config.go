@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+// UrlConfig may be used to customize the way a url is shortened.
+// A UrlConfig instance can be created by calling `DefaultUrlConfig()`.
 type UrlConfig interface {
 	getConfig() *urlConfig
 

@@ -7,6 +7,8 @@ import (
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 )
 
+// Config is used to customize the shortener.
+// To create a config instance use `DefaultConfig()`.
 type Config interface {
 	getConfig() *config
 
