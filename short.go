@@ -16,7 +16,11 @@ type Shortener interface {
 	// CreateShortenedUrl creates a shortened url for `url`.
 	CreateShortenedUrl(ctx context.Context, url string, config ...UrlConfig) (ShortenedURL, error)
 	// GetUrlFromShortenedUrl receives a shortened url `surl` and returns the original url.
+	// E.g.: https://short.com/abCD123
 	GetUrlFromShortenedUrl(ctx context.Context, surl string) (string, error)
+	// GetUrlFromShortenedUrl receives a shortened url `id` and returns the original url.
+	// E.g.: abCD123
+	GetUrlFromShortenedUrlId(ctx context.Context, id string) (string, error)
 }
 
 type shortner struct {
@@ -142,6 +146,10 @@ func (s *shortner) GetUrlFromShortenedUrl(ctx context.Context, surl string) (str
 
 	id := strings.Trim(su.Path, "/")
 
+	return s.GetUrlFromShortenedUrlId(ctx, id)
+}
+
+func (s *shortner) GetUrlFromShortenedUrlId(ctx context.Context, id string) (string, error) {
 	if len(id) == 0 || !isAlphaNumeric(id) {
 		return "", fmt.Errorf("invalid short url path %s", id)
 	}
